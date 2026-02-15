@@ -1,0 +1,32 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "linkedin-scheduler-remote-ldraney"
+version = "0.1.0"
+description = "Remote MCP connector wrapping linkedin-mcp-scheduler with LinkedIn OAuth 2.0 over Streamable HTTP"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+authors = [
+    { name = "Lucas Draney", email = "107153866+ldraney@users.noreply.github.com" },
+]
+dependencies = [
+    "linkedin-mcp-scheduler-ldraney>=0.1.0,<1.0",
+    "cryptography>=46.0,<47.0",
+    "python-dotenv>=1.0,<2.0",
+    "httpx>=0.28,<1.0",
+    "uvicorn>=0.34,<1.0",
+]
+
+[project.urls]
+Repository = "https://github.com/ldraney/linkedin-scheduler-remote"
+Issues = "https://github.com/ldraney/linkedin-scheduler-remote/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["auth"]
+include = ["server.py", "client_patch.py", "auth/"]
+
+[tool.hatch.build.targets.sdist]
+include = ["server.py", "client_patch.py", "auth/", "pyproject.toml", "README.md", "requirements.txt"]
