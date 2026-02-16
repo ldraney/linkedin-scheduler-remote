@@ -1,3 +1,7 @@
+[![PyPI](https://img.shields.io/pypi/v/linkedin-scheduler-remote-ldraney)](https://pypi.org/project/linkedin-scheduler-remote-ldraney/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+
 # linkedin-scheduler-remote
 
 Remote MCP server wrapping [linkedin-mcp-scheduler](https://github.com/ldraney/linkedin-mcp-scheduler) with LinkedIn OAuth 2.0 and Streamable HTTP transport — designed for Claude.ai connectors.
@@ -81,6 +85,10 @@ Production deployment is managed by [mcp-gateway-k8s](https://github.com/ldraney
 ## Design Notes
 
 The scheduler-remote differs from gcal/notion remotes in one key way: there's a **daemon** (`linkedin-mcp-scheduler-daemon`) that publishes posts to LinkedIn. Currently operates in single-user mode — the daemon uses its own env-var credentials. Multi-user daemon support (per-user credentials stored with each post) is a future enhancement.
+
+## Privacy
+
+See [PRIVACY.md](PRIVACY.md) for our privacy policy.
 
 ## License
 
