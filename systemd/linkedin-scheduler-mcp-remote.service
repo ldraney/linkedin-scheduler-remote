@@ -1,0 +1,15 @@
+[Unit]
+Description=LinkedIn Scheduler MCP Remote Server
+After=network.target
+
+[Service]
+Type=simple
+User=ldraney
+WorkingDirectory=/home/ldraney/linkedin-scheduler-remote
+EnvironmentFile=/home/ldraney/linkedin-scheduler-remote/.env
+ExecStart=/home/ldraney/linkedin-scheduler-remote/.venv/bin/python server.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
