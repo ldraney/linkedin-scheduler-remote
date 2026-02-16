@@ -19,7 +19,7 @@ load_dotenv()
 LINKEDIN_OAUTH_CLIENT_ID = os.environ["LINKEDIN_OAUTH_CLIENT_ID"]
 LINKEDIN_OAUTH_CLIENT_SECRET = os.environ["LINKEDIN_OAUTH_CLIENT_SECRET"]
 SESSION_SECRET = os.environ["SESSION_SECRET"]
-BASE_URL = os.environ.get("BASE_URL", "https://example.com")
+BASE_URL = os.environ["BASE_URL"]
 HOST = os.environ.get("HOST", "127.0.0.1")
 PORT = int(os.environ.get("PORT", "8002"))
 

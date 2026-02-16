@@ -4,7 +4,7 @@ run:
 	.venv/bin/python server.py
 
 tunnel:
-	tailscale funnel 8002
+	tailscale funnel $${PORT:-8002}
 
 dev:
 	tmux new-session -d -s linkedin 'make run' \; split-window -h 'make tunnel' \; attach

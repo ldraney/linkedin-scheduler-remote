@@ -26,7 +26,10 @@ Issues = "https://github.com/ldraney/linkedin-scheduler-remote/issues"
 
 [tool.hatch.build.targets.wheel]
 packages = ["auth"]
-include = ["server.py", "client_patch.py", "auth/"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"server.py" = "server.py"
+"client_patch.py" = "client_patch.py"
 
 [tool.hatch.build.targets.sdist]
 include = ["server.py", "client_patch.py", "auth/", "pyproject.toml", "README.md", "requirements.txt"]

@@ -65,13 +65,16 @@ class TokenStore:
         self._path.parent.mkdir(parents=True, exist_ok=True)
         encrypted = self._fernet.encrypt(json.dumps(self._data).encode())
         tmp_fd, tmp_path = tempfile.mkstemp(dir=str(self._path.parent))
+        closed = False
         try:
             os.write(tmp_fd, encrypted)
             os.fsync(tmp_fd)
             os.close(tmp_fd)
+            closed = True
             os.replace(tmp_path, str(self._path))
         except:
-            os.close(tmp_fd)
+            if not closed:
+                os.close(tmp_fd)
             os.unlink(tmp_path)
             raise
 
