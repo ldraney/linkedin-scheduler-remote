@@ -85,14 +85,21 @@ mcp.settings.host = HOST
 mcp.settings.port = PORT
 mcp.settings.stateless_http = True
 
-# Allow the public hostname through transport security
+# Allow the public hostname (and any additional internal hostnames) through
+# transport security. ADDITIONAL_ALLOWED_HOSTS is comma-separated, used for
+# K8s internal service names (e.g. "linkedin-scheduler-remote,linkedin-scheduler-remote:8003")
 from urllib.parse import urlparse  # noqa: E402
 
+_allowed: list[str] = []
 _parsed = urlparse(BASE_URL)
 if _parsed.hostname:
-    _allowed = [_parsed.hostname]
+    _allowed.append(_parsed.hostname)
     if _parsed.port:
         _allowed.append(f"{_parsed.hostname}:{_parsed.port}")
+_extra = os.environ.get("ADDITIONAL_ALLOWED_HOSTS", "")
+if _extra:
+    _allowed.extend(h.strip() for h in _extra.split(",") if h.strip())
+if _allowed:
     mcp.settings.transport_security.allowed_hosts = _allowed
 
 # ---------------------------------------------------------------------------
