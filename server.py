@@ -70,18 +70,44 @@ import linkedin_mcp_scheduler.daemon as _daemon_module  # noqa: E402
 import linkedin_mcp_scheduler.db as _db_module  # noqa: E402
 
 
-# Subclass ScheduledPostsDB with check_same_thread=False so the daemon thread
-# can share the DB connection with the main (MCP server) thread.
+# Wrap sqlite3.Connection with a lock so the daemon thread and MCP server
+# thread can safely share the DB (ScheduledPostsDB calls self._conn.execute()
+# and self._conn.commit() directly, so we proxy at the connection level).
+class _LockedConnection:
+    """Thread-safe wrapper around a sqlite3.Connection."""
+
+    def __init__(self, conn: _sqlite3.Connection):
+        self._conn = conn
+        self._lock = threading.Lock()
+
+    def execute(self, *args, **kwargs):
+        with self._lock:
+            return self._conn.execute(*args, **kwargs)
+
+    def commit(self, *args, **kwargs):
+        with self._lock:
+            return self._conn.commit(*args, **kwargs)
+
+    def close(self):
+        self._conn.close()
+
+    @property
+    def row_factory(self):
+        return self._conn.row_factory
+
+    @row_factory.setter
+    def row_factory(self, value):
+        self._conn.row_factory = value
+
+
 class _ThreadSafeDB(_db_module.ScheduledPostsDB):
     def __init__(self, db_path: str = _db_module.DB_PATH):
-        parent = os.path.dirname(db_path)
-        if parent:
-            os.makedirs(parent, exist_ok=True)
-        self._db_path = db_path
-        self._conn = _sqlite3.connect(db_path, check_same_thread=False)
-        self._conn.row_factory = _sqlite3.Row
-        self._conn.execute(_db_module._SCHEMA)
-        self._conn.commit()
+        super().__init__(db_path)
+        # Reconnect with check_same_thread=False and wrap in locked proxy
+        self._conn.close()
+        raw_conn = _sqlite3.connect(db_path, check_same_thread=False)
+        raw_conn.row_factory = _sqlite3.Row
+        self._conn = _LockedConnection(raw_conn)
 
 
 _db_module.ScheduledPostsDB = _ThreadSafeDB

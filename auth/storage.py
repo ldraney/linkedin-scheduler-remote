@@ -227,8 +227,10 @@ class TokenStore:
     def get_any_linkedin_token(self) -> tuple[str, str | None] | None:
         """Return (linkedin_access_token, linkedin_refresh_token) from any stored user, or None.
 
-        Skips expired MCP tokens. In a multi-user deployment, returns the first
-        valid token found — TODO: associate posts with specific user credentials.
+        Skips expired MCP tokens. Note: LinkedIn token expiry (~60 days) is NOT
+        checked here — if the LinkedIn token has expired, the daemon will get a
+        401 from LinkedIn and mark posts as failed (user must re-authenticate).
+        TODO: associate posts with specific user credentials for multi-user.
         """
         with self._lock:
             now = time.time()
