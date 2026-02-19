@@ -219,3 +219,16 @@ class TokenStore:
             if token_data and "access_token" in token_data:
                 self._data["access_tokens"].pop(token_data["access_token"], None)
             self._save()
+
+    # ------------------------------------------------------------------
+    # LinkedIn credential lookup (for publisher daemon)
+    # ------------------------------------------------------------------
+
+    def get_any_linkedin_token(self) -> tuple[str, str | None] | None:
+        """Return (linkedin_access_token, linkedin_refresh_token) from any stored user, or None."""
+        with self._lock:
+            for token_data in self._data["access_tokens"].values():
+                linkedin_token = token_data.get("linkedin_access_token")
+                if linkedin_token:
+                    return (linkedin_token, token_data.get("linkedin_refresh_token"))
+        return None

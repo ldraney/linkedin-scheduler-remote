@@ -7,6 +7,8 @@ from __future__ import annotations
 import logging
 import os
 import sys
+import threading
+import time
 
 from dotenv import load_dotenv
 
@@ -48,13 +50,51 @@ from linkedin_mcp_scheduler.server import mcp  # noqa: E402
 from auth.provider import LinkedInOAuthProvider  # noqa: E402
 from auth.storage import TokenStore  # noqa: E402
 
-store = TokenStore(secret=SESSION_SECRET)
+DATA_DIR = os.environ.get("DATA_DIR", "data")
+
+store = TokenStore(secret=SESSION_SECRET, data_dir=DATA_DIR)
 provider = LinkedInOAuthProvider(
     store=store,
     linkedin_client_id=LINKEDIN_OAUTH_CLIENT_ID,
     linkedin_client_secret=LINKEDIN_OAUTH_CLIENT_SECRET,
     base_url=BASE_URL,
 )
+
+# ---------------------------------------------------------------------------
+# 3.5. Start publisher daemon in background thread
+# ---------------------------------------------------------------------------
+
+import linkedin_mcp_scheduler.daemon as _daemon_module  # noqa: E402
+
+
+def _build_client_from_store():
+    from linkedin_sdk import LinkedInClient
+
+    creds = store.get_any_linkedin_token()
+    if not creds:
+        raise RuntimeError("No LinkedIn credentials in token store — authenticate via OAuth first")
+    access_token, _ = creds
+    return LinkedInClient(access_token=access_token)
+
+
+_daemon_module._build_client = _build_client_from_store
+
+
+def _daemon_loop():
+    poll_interval = int(os.environ.get("POLL_INTERVAL_SECONDS", "60"))
+    logger.info("Publisher daemon started (poll interval: %ds)", poll_interval)
+    while True:
+        try:
+            _daemon_module.run_once()
+        except RuntimeError as e:
+            logger.debug("Daemon skipped: %s", e)
+        except Exception as e:
+            logger.error("Daemon error: %s", e)
+        time.sleep(poll_interval)
+
+
+_daemon_thread = threading.Thread(target=_daemon_loop, daemon=True, name="publisher-daemon")
+_daemon_thread.start()
 
 # ---------------------------------------------------------------------------
 # 4. Configure auth on the existing mcp instance
