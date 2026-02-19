@@ -219,3 +219,25 @@ class TokenStore:
             if token_data and "access_token" in token_data:
                 self._data["access_tokens"].pop(token_data["access_token"], None)
             self._save()
+
+    # ------------------------------------------------------------------
+    # LinkedIn credential lookup (for publisher daemon)
+    # ------------------------------------------------------------------
+
+    def get_any_linkedin_token(self) -> tuple[str, str | None] | None:
+        """Return (linkedin_access_token, linkedin_refresh_token) from any stored user, or None.
+
+        Skips expired MCP tokens. Note: LinkedIn token expiry (~60 days) is NOT
+        checked here — if the LinkedIn token has expired, the daemon will get a
+        401 from LinkedIn and mark posts as failed (user must re-authenticate).
+        TODO: associate posts with specific user credentials for multi-user.
+        """
+        with self._lock:
+            now = time.time()
+            for token_data in self._data["access_tokens"].values():
+                if token_data.get("expires_at") and token_data["expires_at"] < now:
+                    continue
+                linkedin_token = token_data.get("linkedin_access_token")
+                if linkedin_token:
+                    return (linkedin_token, token_data.get("linkedin_refresh_token"))
+        return None
