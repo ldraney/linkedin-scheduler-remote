@@ -64,7 +64,28 @@ provider = LinkedInOAuthProvider(
 # 3.5. Start publisher daemon in background thread
 # ---------------------------------------------------------------------------
 
+import sqlite3 as _sqlite3  # noqa: E402
+
 import linkedin_mcp_scheduler.daemon as _daemon_module  # noqa: E402
+import linkedin_mcp_scheduler.db as _db_module  # noqa: E402
+
+
+# Subclass ScheduledPostsDB with check_same_thread=False so the daemon thread
+# can share the DB connection with the main (MCP server) thread.
+class _ThreadSafeDB(_db_module.ScheduledPostsDB):
+    def __init__(self, db_path: str = _db_module.DB_PATH):
+        parent = os.path.dirname(db_path)
+        if parent:
+            os.makedirs(parent, exist_ok=True)
+        self._db_path = db_path
+        self._conn = _sqlite3.connect(db_path, check_same_thread=False)
+        self._conn.row_factory = _sqlite3.Row
+        self._conn.execute(_db_module._SCHEMA)
+        self._conn.commit()
+
+
+_db_module.ScheduledPostsDB = _ThreadSafeDB
+_db_module.reset_db()  # Reset singleton so next get_db() creates a _ThreadSafeDB
 
 
 def _build_client_from_store():
@@ -87,6 +108,7 @@ def _daemon_loop():
         try:
             _daemon_module.run_once()
         except RuntimeError as e:
+            # Expected when no user has authenticated yet (_build_client_from_store raises)
             logger.debug("Daemon skipped: %s", e)
         except Exception as e:
             logger.error("Daemon error: %s", e)
