@@ -64,54 +64,29 @@ provider = LinkedInOAuthProvider(
 # 3.5. Start publisher daemon in background thread
 # ---------------------------------------------------------------------------
 
-import sqlite3 as _sqlite3  # noqa: E402
-
 import linkedin_mcp_scheduler.daemon as _daemon_module  # noqa: E402
 import linkedin_mcp_scheduler.db as _db_module  # noqa: E402
 
-
-# Wrap sqlite3.Connection with a lock so the daemon thread and MCP server
-# thread can safely share the DB (ScheduledPostsDB calls self._conn.execute()
-# and self._conn.commit() directly, so we proxy at the connection level).
-class _LockedConnection:
-    """Thread-safe wrapper around a sqlite3.Connection."""
-
-    def __init__(self, conn: _sqlite3.Connection):
-        self._conn = conn
-        self._lock = threading.Lock()
-
-    def execute(self, *args, **kwargs):
-        with self._lock:
-            return self._conn.execute(*args, **kwargs)
-
-    def commit(self, *args, **kwargs):
-        with self._lock:
-            return self._conn.commit(*args, **kwargs)
-
-    def close(self):
-        self._conn.close()
-
-    @property
-    def row_factory(self):
-        return self._conn.row_factory
-
-    @row_factory.setter
-    def row_factory(self, value):
-        self._conn.row_factory = value
+# Give the daemon thread its own SQLite connection via thread-local storage.
+# The MCP server (main thread) uses the default get_db() singleton; the daemon
+# thread gets a separate ScheduledPostsDB instance. SQLite handles file-level
+# locking between connections, so no shared-connection threading issues arise.
+_thread_local = threading.local()
 
 
-class _ThreadSafeDB(_db_module.ScheduledPostsDB):
-    def __init__(self, db_path: str = _db_module.DB_PATH):
-        super().__init__(db_path)
-        # Reconnect with check_same_thread=False and wrap in locked proxy
-        self._conn.close()
-        raw_conn = _sqlite3.connect(db_path, check_same_thread=False)
-        raw_conn.row_factory = _sqlite3.Row
-        self._conn = _LockedConnection(raw_conn)
+def _thread_local_get_db(db_path: str | None = None) -> _db_module.ScheduledPostsDB:
+    resolved = db_path or _db_module.DB_PATH
+    db = getattr(_thread_local, "db", None)
+    if db is not None and db._db_path != resolved:
+        db.close()
+        db = None
+    if db is None:
+        db = _db_module.ScheduledPostsDB(resolved)
+        _thread_local.db = db
+    return db
 
 
-_db_module.ScheduledPostsDB = _ThreadSafeDB
-_db_module.reset_db()  # Reset singleton so next get_db() creates a _ThreadSafeDB
+_daemon_module.get_db = _thread_local_get_db
 
 
 def _build_client_from_store():
