@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "linkedin-scheduler-remote-ldraney"
-version = "0.1.1"
+version = "0.1.2"
 description = "Remote MCP connector wrapping linkedin-mcp-scheduler with LinkedIn OAuth 2.0 over Streamable HTTP"
 readme = "README.md"
 requires-python = ">=3.10"
